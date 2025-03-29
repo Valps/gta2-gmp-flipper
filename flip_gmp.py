@@ -536,6 +536,9 @@ def flip_lid(block_data, flip_code):
     new_block_data = block_data[:8] + new_byte_array + block_data[10:]
     return new_block_data
 
+def flip_tile(side_word):
+    return side_word ^ (2**13)
+
 def flip_sides(block_data, flip_code):
     left_word = int.from_bytes(block_data[0:2], 'little')
     right_word = int.from_bytes(block_data[2:4], 'little')
@@ -545,15 +548,20 @@ def flip_sides(block_data, flip_code):
     byte = block_data[-1]
     slope_type = byte >> 2
 
-    # TODO: flip side tiles as well, maybe
-
     # some slopes uses right or left sides only. Flip their sides accordingly if flip = FLIP_X
     if (45 <= slope_type <= 52
         and (flip_code == FLIP_X) ):    #  or rotation_angle == 270
 
-        new_block_data = change_side_tile(block_data, slope_type, 180)  # TODO: fix 180 rotation param
+        new_block_data = change_side_tile(block_data, slope_type, 180)  # rotate slopes by 180 degree
         fix_sides
         return new_block_data
+
+    # flip side tiles as well
+    if (flip_code != FLIP_XY):
+        top_word = flip_tile(top_word)
+        bottom_word = flip_tile(bottom_word)
+        right_word = flip_tile(right_word)
+        left_word = flip_tile(left_word)
 
     #array = [left_word, right_word, top_word, bottom_word]
     array = []
@@ -676,7 +684,19 @@ def change_side_tile(block_data, slope_type, rotation_angle):
     
     return new_block_data
 
-def rotate_slope(block_data, rotation_angle):
+def swap_slope(array, flip_code):
+    if flip_code == FLIP_X:
+        return [array[0], array[1], array[3], array[2]]
+    elif flip_code == FLIP_Y:
+        return [array[1], array[0], array[2], array[3]]
+    elif flip_code == FLIP_XY:
+        return [array[1], array[0], array[3], array[2]]
+    else:
+        print(f"ERROR! Wrong flip code = {flip_code}")
+        sys.exit(-1)
+        return
+
+def flip_slope(block_data, flip_code):
     byte = block_data[-1]
     slope_type = byte >> 2
 
@@ -690,12 +710,7 @@ def rotate_slope(block_data, rotation_angle):
             slope_array = [1, 3, 5, 7]
             idx = slope_array.index(slope_type)
 
-            if (rotation_angle == 90):
-                new_slope_array = rotate_slope_90(slope_array)
-            elif (rotation_angle == 180):
-                new_slope_array = rotate_slope_180(slope_array)
-            elif (rotation_angle == 270):
-                new_slope_array = rotate_slope_270(slope_array)
+            new_slope_array = swap_slope(slope_array, flip_code)
             
             new_slope_type = new_slope_array[idx]
             
@@ -704,12 +719,7 @@ def rotate_slope(block_data, rotation_angle):
             slope_array = [2, 4, 6, 8]
             idx = slope_array.index(slope_type)
 
-            if (rotation_angle == 90):
-                new_slope_array = rotate_slope_90(slope_array)
-            elif (rotation_angle == 180):
-                new_slope_array = rotate_slope_180(slope_array)
-            elif (rotation_angle == 270):
-                new_slope_array = rotate_slope_270(slope_array)
+            new_slope_array = swap_slope(slope_array, flip_code)
             
             new_slope_type = new_slope_array[idx]
 
@@ -731,8 +741,13 @@ def rotate_slope(block_data, rotation_angle):
         array = [0,1,2,3]
         idx = array.index(direction)
 
-        new_array = shift_array(array, ROTATION_ANGLES.index(rotation_angle))
-        new_direction = new_array[idx]
+        if ( ( (25 <= slope_type <= 40) and (flip_code == FLIP_X) )
+            or ( (9 <= slope_type <= 24) and (flip_code == FLIP_Y) ) ):
+
+            new_array = shift_array(array, ROTATION_ANGLES.index(180))
+            new_direction = new_array[idx]
+        else:
+            new_direction = direction   # do nothing
 
         if (new_direction == 0):
             new_slope_type = 33 + offset
@@ -749,69 +764,64 @@ def rotate_slope(block_data, rotation_angle):
         slope_array = [41, 42, 43, 44]
         idx = slope_array.index(slope_type)
 
-        if (rotation_angle == 90):
-            new_slope_array = rotate_slope_90(slope_array)
-        elif (rotation_angle == 180):
-            new_slope_array = rotate_slope_180(slope_array)
-        elif (rotation_angle == 270):
-            new_slope_array = rotate_slope_270(slope_array)
+        new_slope_array = swap_slope(slope_array, flip_code)
         
         new_slope_type = new_slope_array[idx]
 
     elif (45 <= slope_type <= 48):      # diagonal slope
-
-        slope_array = [45, 48, 47, 46]
-        idx = slope_array.index(slope_type)
-        pass
-        if (rotation_angle == 90):
-            new_slope_array = rotate_slope_90(slope_array)
-        elif (rotation_angle == 180):
-            new_slope_array = rotate_slope_180(slope_array)
-        elif (rotation_angle == 270):
-            new_slope_array = rotate_slope_270(slope_array)
         
+        if flip_code == FLIP_X:
+            slope_array = [45, 46, 47, 48]
+        elif flip_code == FLIP_Y:
+            slope_array = [45, 47, 46, 48]
+        elif flip_code == FLIP_XY:
+            slope_array = [45, 47, 46, 48]  # TODO: flip XY
+            pass
+        
+        
+        idx = slope_array.index(slope_type)
+        new_slope_array = swap_slope(slope_array, FLIP_XY)
+
         new_slope_type = new_slope_array[idx]
 
     elif (49 <= slope_type <= 52):
         
-        slope_array = [49, 52, 51, 50]
+        #slope_array = [49, 52, 51, 50]
+        if flip_code == FLIP_X:
+            slope_array = [49, 50, 51, 52]
+        elif flip_code == FLIP_Y:
+            slope_array = [49, 51, 50, 52]
+        elif flip_code == FLIP_XY:
+            slope_array = [49, 50, 51, 52]  # TODO: flip XY
+            pass
+
         idx = slope_array.index(slope_type)
-        pass
-        if (rotation_angle == 90):
-            new_slope_array = rotate_slope_90(slope_array)
-        elif (rotation_angle == 180):
-            new_slope_array = rotate_slope_180(slope_array)
-        elif (rotation_angle == 270):
-            new_slope_array = rotate_slope_270(slope_array)
+        new_slope_array = swap_slope(slope_array, FLIP_XY)
         
         new_slope_type = new_slope_array[idx]
 
     elif (53 <= slope_type <= 56):
 
-        slope_array = [53, 54, 56, 55]
+        slope_array = [55, 56, 53, 54]
         idx = slope_array.index(slope_type)
 
-        if (rotation_angle == 90):
-            new_slope_array = rotate_slope_90(slope_array)
-        elif (rotation_angle == 180):
-            new_slope_array = rotate_slope_180(slope_array)
-        elif (rotation_angle == 270):
-            new_slope_array = rotate_slope_270(slope_array)
+        new_slope_array = swap_slope(slope_array, flip_code)
         
         new_slope_type = new_slope_array[idx]
 
     elif (57 <= slope_type <= 60):
 
-        slope_array = [57, 59, 60, 58]
-        idx = slope_array.index(slope_type)
-
-        if (rotation_angle == 90):
-            new_slope_array = rotate_slope_90(slope_array)
-        elif (rotation_angle == 180):
-            new_slope_array = rotate_slope_180(slope_array)
-        elif (rotation_angle == 270):
-            new_slope_array = rotate_slope_270(slope_array)
+        if flip_code == FLIP_X:
+            slope_array = [57, 58, 59, 60]
+        elif flip_code == FLIP_Y:
+            slope_array = [58, 59, 57, 60]
+        elif flip_code == FLIP_XY:
+            slope_array = [57, 58, 59, 60]  # TODO: flip XY
+            pass
         
+        idx = slope_array.index(slope_type)
+        new_slope_array = swap_slope(slope_array, FLIP_XY)
+
         new_slope_type = new_slope_array[idx]
     
     if (new_slope_type != None):
@@ -847,8 +857,8 @@ def flip_info(block_info_array, flip_code):
                     new_block_data = flip_lid(new_block_data, flip_code)
                 new_block_data = flip_sides(new_block_data, flip_code)
 
-                #if is_slope(new_block_data):
-                #    new_block_data = rotate_slope(new_block_data, flip_code)
+                if is_slope(new_block_data):
+                    new_block_data = flip_slope(new_block_data, flip_code)
 
                 block_info_array[z][y][x] = new_block_data
 
@@ -922,7 +932,7 @@ def flip_map(output_path, chunk_infos, flip_code, block_info_array):
                 if (z >= 8):
                     break
 
-    #print(f"Map blocks rotated successfully by {rotation_angle}°")
+    #print(f"Map blocks flipped successfully")
 
 def get_zones_info_data(gmp_path, chunk_infos):
 
@@ -1010,28 +1020,19 @@ def flip_light_coordinates(light_data, flip_code):
 
     return new_light_data
 
-def rotate_zone_coordinates(zone_data, rotation_angle):
+def flip_zone_coordinates(zone_data, flip_code):
     zone_x = zone_data[1]
     zone_y = zone_data[2]
     zone_w = zone_data[3]
     zone_h = zone_data[4]
 
-    # TODO: test
-    #zone_type = zone_data[0]
-    #if zone_type == 14: # ignore gang zones
-    #    return zone_data
-
-    if (rotation_angle == 180):
+    if (flip_code == FLIP_XY):
         zone_x = MAP_WIDTH - zone_x - zone_w + 1
         zone_y = MAP_HEIGHT - zone_y - zone_h + 1
-    elif (rotation_angle == 90):
-        zone_x, zone_y = MAP_HEIGHT - zone_y - zone_h + 1, zone_x
-        zone_w, zone_h = zone_h, zone_w
-        pass
-    elif (rotation_angle == 270):
-        zone_x, zone_y = zone_y, MAP_WIDTH - zone_x - zone_w + 1
-        zone_w, zone_h = zone_h, zone_w
-        pass
+    elif (flip_code == FLIP_X):
+        zone_x = MAP_WIDTH - zone_x - zone_w + 1
+    elif (flip_code == FLIP_Y):
+        zone_y = MAP_HEIGHT - zone_y - zone_h + 1
 
     if (zone_x < 0 or zone_y < 0):
         print(f"Error: negative zone coordinates: x = {zone_x}, y = {zone_y}")
@@ -1059,19 +1060,19 @@ def flip_light_info(light_info_array, flip_code):
         light_info_array[i] = new_light_data
     return
 
-def rotate_zone_info(zones_info_array, rotation_angle):
+def flip_zone_info(zones_info_array, rotation_angle):
     for i in range(len(zones_info_array)):
         old_zone_data = zones_info_array[i]
-        new_zone_data = rotate_zone_coordinates(old_zone_data, rotation_angle)
+        new_zone_data = flip_zone_coordinates(old_zone_data, rotation_angle)
         zones_info_array[i] = new_zone_data
     return
 
-def rotate_gmp_zones(output_path, chunk_infos, rotation_angle, zones_info_array):
+def flip_gmp_zones(output_path, chunk_infos, rotation_angle, zones_info_array):
     if chunk_infos["ZONE"][0] is None:
         return  # no zones
     
     print("Rotating zones coordinates...")
-    rotate_zone_info(zones_info_array, rotation_angle)
+    flip_zone_info(zones_info_array, rotation_angle)
     
     with open(output_path, 'r+b') as file:
         zone_offset = chunk_infos["ZONE"][0]
@@ -1148,7 +1149,7 @@ def flip_gmp(gmp_path, chunk_infos, flip_x, flip_y):
 
     # flip map
     flip_gmp_blocks(output_path, chunk_infos, flip_code, block_info_array)
-    #flip_gmp_zones(output_path, chunk_infos, flip_code, zones_info_array)
+    flip_gmp_zones(output_path, chunk_infos, flip_code, zones_info_array)
     flip_gmp_lights(output_path, chunk_infos, flip_code, light_info_array)
 
     print(f"\nSuccess! GMP flipped!")
