@@ -139,6 +139,10 @@ def main():
     #rotation_angle = int(args.rot_angle)
     flip_code = get_flip(args.flip_x, args.flip_y)    # 0 = No flip, 1 = Flip x, 2 = Flip y, 3 = Flip x & y
 
+    if flip_code == FLIP_XY:
+        print("ERROR: XY flip not supported yet. Rotate 180° instead.")
+        sys.exit(-1)
+
     if (not miss2_path.exists()):
         print("File not found.")
         sys.exit(-1)
@@ -150,7 +154,8 @@ def main():
     filename = get_filename(miss2_path)
 
     # create output folder, if it not exists
-    output_folder = miss2_path.parent / (filename + "_rotated")
+    flip_type = "x" if flip_code == FLIP_X else "y"
+    output_folder = miss2_path.parent / (filename + f"_flipped_{flip_type}")
     if (not output_folder.exists()):
         output_folder.mkdir()
 

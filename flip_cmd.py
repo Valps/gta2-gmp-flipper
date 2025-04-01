@@ -128,12 +128,18 @@ def flip_params(cmd: list,
                     elif force_rotation_param_flip == FLIP_Y:
                         cmd[i] = normalize(180 - param)
 
-            #print(f"Old: {param}   New: {cmd[i]}")
-            
-            #else:
-            #    cmd[i] = (param + rotation_angle)   # rotate anti-clockwise
-            #    if cmd[i] >= 360:      # mod 360
-            #        cmd[i] -= 360
+            else:
+                if force_rotation_param_flip is None:
+                    if flip_code == FLIP_X:
+                        cmd[i] = normalize(-360 + param)
+                    elif flip_code == FLIP_Y:
+                        cmd[i] = normalize(-180 + param)
+
+                else:
+                    if force_rotation_param_flip == FLIP_X:
+                        cmd[i] = normalize(-360 + param)
+                    elif force_rotation_param_flip == FLIP_Y:
+                        cmd[i] = normalize(-180 + param)
 
         elif type(param) == tuple:
             # flip position coordinates
@@ -514,7 +520,7 @@ def read_line(line, *args) -> list:
 
 
 
-def flip_dec_opcode(line: str, rotation_angle: int):
+def flip_dec_opcode(line: str, flip_code: int):
     
     new_line = line
     
@@ -525,7 +531,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     if "PLAYER_PED" in line_uppercase:
         # PLAYER_PED p1 = (97.50, 73.50, 2.00) 5 1
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.PARAM_NUM, Cmd.ROTATION)
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
         new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4])
         return new_line
     
@@ -534,7 +540,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         if len(line.strip().split(' ')) < 4:    # if not just declaring var
             return new_line
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.PARAM_NUM, Cmd.ROTATION, Cmd.PARAM_ENUM, Cmd.OPT_PARAM_ENUM)
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
 
         if len(cmd_rot) == 6:
             if len(cmd_rot[2]) == 3:
@@ -558,11 +564,11 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         num_parenthesis = line.count('(')
         if num_parenthesis == 1:
             cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XY_F, Cmd.ROTATION, Cmd.VAR_NAME)
-            cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3])
+            cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3])
             new_line = "{} {} = ({:.2f}, {:.2f}) {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[3], cmd_rot[4])
         elif num_parenthesis == 2:
             cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XY_F, Cmd.ROTATION, Cmd.VAR_NAME, Cmd.PARAM_ENUM, Cmd.COORD_XY_F, Cmd.ROTATION)
-            cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3,7])
+            cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3,7])
             new_line = "{} {} = ({:.2f}, {:.2f}) {} {} {} ({:.2f}, {:.2f}) {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[3], cmd_rot[4], cmd_rot[5], cmd_rot[6][0], cmd_rot[6][1], cmd_rot[7])
         
         return new_line
@@ -572,7 +578,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
             return new_line
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.PARAM_NUM, Cmd.ROTATION, Cmd.PARAM_ENUM)
         if len(cmd) > 2: # if not just declaring var
-            cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+            cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
             if len(cmd_rot[2]) == 3:
                 new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) {} {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5])
             else:
@@ -584,7 +590,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
             return new_line
         # l_e_1_guard_1 = CREATE_CHAR (157.50, 9.50, 3.00) 8 0 CRIMINAL END
         cmd = read_line(line, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.OPCODE, Cmd.COORD_XYZ_F, Cmd.PARAM_NUM, Cmd.ROTATION, Cmd.PARAM_ENUM)
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
         if len(cmd_rot[2]) == 3:
             new_line = "{} = {} ({:.2f}, {:.2f}, {:.2f}) {} {} {} END".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5])
         else:
@@ -601,12 +607,12 @@ def flip_dec_opcode(line: str, rotation_angle: int):
             
             # phones seems to have different reference angles.
             if cmd[4].upper() in PHONES:
-                if rotation_angle == FLIP_X:
-                    cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3], force_rotation_param_flip=FLIP_Y)
-                elif rotation_angle == FLIP_Y:
-                    cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3], force_rotation_param_flip=FLIP_X)
+                if flip_code == FLIP_X:
+                    cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3], force_rotation_param_flip=FLIP_Y)
+                elif flip_code == FLIP_Y:
+                    cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3], force_rotation_param_flip=FLIP_X)
             else:
-                cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3])
+                cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3])
             
             if len(cmd_rot) == 5:
                 if len(cmd_rot[2]) == 3:
@@ -628,7 +634,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         if type(cmd[-1]) == str and cmd[-1].upper() == "END":
             cmd.pop()
 
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3])
         if len(cmd_rot) == 6:
             if len(cmd_rot[2]) == 3:
                 new_line = "{} = {} ({:.2f}, {:.2f}, {:.2f}) {} {} {} END".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5])
@@ -651,7 +657,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         if cmd[-1].upper() == "END":
             cmd.pop()
 
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
         
         if len(cmd_rot) == 6:
             if len(cmd_rot[2]) == 3:
@@ -669,7 +675,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     elif "CREATE_SOUND" in line_uppercase:
         # sound28 = CREATE_SOUND (113.50, 123.50, 2.00) CHURCH_SINGING PLAY_FOREVER END
         cmd = read_line(line, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.OPCODE, Cmd.COORD_XYZ_F, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} = {} ({:.2f}, {:.2f}, {:.2f}) {} {} END".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4])
         return new_line
 
@@ -679,36 +685,36 @@ def flip_dec_opcode(line: str, rotation_angle: int):
             return new_line
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM)
         if len(cmd) > 2:
-            cmd_rot = flip_params(cmd, rotation_angle)
+            cmd_rot = flip_params(cmd, flip_code)
             new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4])
         return new_line
 
     elif "RADIO_STATION" in line_uppercase:
         # RADIO_STATION radio1 = STATION_ZAIBATSU (247.50, 67.50)
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.PARAM_ENUM, Cmd.COORD_XY_F)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} {} = {} ({:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3][0], cmd_rot[3][1])
         return new_line
 
     elif "DECLARE_CRANE_POWERUP" in line_uppercase:
         # DECLARE_CRANE_POWERUP (crane6, gen3, 197, 221, 3)
         cmd = read_line(line, Cmd.OPCODE, Cmd.TWO_PARAMS_XYZ_U8)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({}, {}, {}, {}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3][0], cmd_rot[3][1], cmd_rot[3][2])
         return new_line
 
     elif "CONVEYOR" in line_uppercase:
         # CONVEYOR conv1 = (9.50, 77.50, 3.00) (1.00, 13.00) 0 1   xyz/xy width height speed_x speed_y
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.WIDTH_HEIGHT, Cmd.PARAM_NUM, Cmd.PARAM_NUM)
-        cmd_rot = flip_params(cmd, rotation_angle, width_height_tuple_indexes=[3])
+        cmd_rot = flip_params(cmd, flip_code, width_height_tuple_indexes=[3])
 
-        # rotate conveyor speeds
-        if rotation_angle == 180:
+        # flip conveyor speeds
+        if flip_code == FLIP_XY:
             cmd_rot[4], cmd_rot[5] = -cmd_rot[4], -cmd_rot[5]
-        elif rotation_angle == 90:
-            cmd_rot[4], cmd_rot[5] = -cmd_rot[5], cmd_rot[4]
-        elif rotation_angle == 270:
-            cmd_rot[4], cmd_rot[5] = cmd_rot[5], -cmd_rot[4]
+        elif flip_code == FLIP_X:
+            cmd_rot[4] = -cmd_rot[4]
+        elif flip_code == FLIP_Y:
+            cmd_rot[5] = -cmd_rot[5]
 
         if len(cmd_rot[2]) == 3:
             new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) ({:.2f}, {:.2f}) {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3][0], cmd_rot[3][1], cmd_rot[4], cmd_rot[5])
@@ -724,7 +730,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         if "SWITCH_GENERATOR" in line_uppercase:
             return new_line
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.ROTATION, Cmd.PARAM_ENUM, Cmd.PARAM_NUM, Cmd.PARAM_NUM, Cmd.OPT_PARAM_NUM)
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3])
 
         if len(cmd_rot) == 7:
             if len(cmd_rot[2]) == 3:
@@ -742,7 +748,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     elif "DESTRUCTOR" in line_uppercase:
         # DESTRUCTOR des1 = (9.50, 83.50, 3.00) (1.00, 1.00)
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.WIDTH_HEIGHT)
-        cmd_rot = flip_params(cmd, rotation_angle, width_height_tuple_indexes=[3])
+        cmd_rot = flip_params(cmd, flip_code, width_height_tuple_indexes=[3])
 
         if len(cmd_rot[2]) == 3:
             new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) ({:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3][0], cmd_rot[3][1])
@@ -754,7 +760,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     elif "CREATE_LIGHT" in line_uppercase:
         # r_h_2_prison_alarm_light_1 = CREATE_LIGHT (29.00, 241.00, 1.00) 7.99 255 (255, 0, 0) 30 100 5
         cmd = read_line(line, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.OPCODE, Cmd.COORD_XYZ_F, Cmd.PARAM_FLOAT, Cmd.PARAM_NUM, Cmd.RGB, Cmd.PARAM_NUM, Cmd.PARAM_NUM, Cmd.PARAM_NUM)
-        cmd_rot = flip_params(cmd, rotation_angle, blacklist_indexes=[5])
+        cmd_rot = flip_params(cmd, flip_code, blacklist_indexes=[5])
         new_line = "{} = {} ({:.2f}, {:.2f}, {:.2f}) {} {} ({}, {}, {}) {} {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5][0], cmd_rot[5][1], cmd_rot[5][2], cmd_rot[6], cmd_rot[7], cmd_rot[8])
         return new_line
 
@@ -765,7 +771,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         if len(line.strip().split(' ')) < 4:    # if not just declaring var
             return new_line
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XYZ_F, Cmd.PARAM_FLOAT, Cmd.PARAM_NUM, Cmd.RGB, Cmd.PARAM_NUM, Cmd.PARAM_NUM, Cmd.PARAM_NUM)
-        cmd_rot = flip_params(cmd, rotation_angle, blacklist_indexes=[5])
+        cmd_rot = flip_params(cmd, flip_code, blacklist_indexes=[5])
         new_line = "{} {} = ({:.2f}, {:.2f}, {:.2f}) {} {} ({}, {}, {}) {} {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5][0], cmd_rot[5][1], cmd_rot[5][2], cmd_rot[6], cmd_rot[7], cmd_rot[8])
         return new_line
 
@@ -774,10 +780,10 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         # BOTTOM 0 ANY_PLAYER_ONE_CAR CLOSE_WHEN_OPEN_RULE_FAILS 0 FLIP_RIGHT NOT_REVERSED
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8, Cmd.COORD_XYZ_WH_F,
                         Cmd.PARAM_ENUM, Cmd.PARAM_NUM, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_NUM, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.OPT_PARAM_ENUM_OR_NUM)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
 
         old_face = cmd_rot[5]
-        new_face = flip_face(old_face, rotation_angle)
+        new_face = flip_face(old_face, flip_code)
         cmd_rot[5] = new_face
 
         # fix double doors xy offset
@@ -787,17 +793,21 @@ def flip_dec_opcode(line: str, rotation_angle: int):
             new_y = cmd_rot[3][1]
             z = cmd_rot[3][2]
 
-            if rotation_angle == FLIP_X:
-                if new_face.upper() == "RIGHT":
-                    new_y -= 1 
-                elif new_face.upper() == "LEFT":
-                    new_y += 1
+            #if flip_code == FLIP_X:
+            if new_face.upper() == "RIGHT":
+                new_y -= 1 
+            elif new_face.upper() == "LEFT":
+                new_y += 1
+            if new_face.upper() == "TOP":
+                new_x -= 1
+            elif new_face.upper() == "BOTTOM":
+                new_x += 1
 
-            elif rotation_angle == FLIP_Y:
-                if new_face.upper() == "TOP":
-                    new_x += 1
-                elif new_face.upper() == "BOTTOM":
-                    new_x -= 1
+            #elif flip_code == FLIP_Y:
+            #    if new_face.upper() == "TOP":
+            #        new_x += 1
+            #    elif new_face.upper() == "BOTTOM":
+            #        new_x -= 1
 
             cmd_rot[3] = (new_x, new_y, z)
 
@@ -810,7 +820,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     elif "SET_GANG_INFO" in line_uppercase:
         # SET_GANG_INFO (redngang, 5, PISTOL, MACHINE_GUN, MOLOTOV, 4, 47.50, 49.50, 255.00, 1, PICKUP, 3)
         cmd = read_line(line, Cmd.OPCODE, Cmd.GANG_INFO)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({}, {}, {}, {}, {}, {}, {:.2f}, {:.2f}, {:.2f}, {}, {}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3], cmd_rot[4], cmd_rot[5], cmd_rot[6], cmd_rot[7][0], cmd_rot[7][1], cmd_rot[7][2], cmd_rot[8], cmd_rot[9], cmd_rot[10])
 
         return new_line
@@ -818,7 +828,7 @@ def flip_dec_opcode(line: str, rotation_angle: int):
     elif "CRUSHER" in line_uppercase:
         # CRUSHER crusher1 = (244.50, 243.50)
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.COORD_XY_F)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} {} = ({:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1])
 
         return new_line
@@ -827,14 +837,14 @@ def flip_dec_opcode(line: str, rotation_angle: int):
         # THREAD_TRIGGER thr_kill_frenzy_6 = THREAD_WAIT_FOR_CHAR_IN_AREA (p1, 112.50, 241.50, 2.00, 0.50, 0.50, do_kill_frenzy_6:)
         # THREAD_TRIGGER thr_kill_frenzy_6 = THREAD_WAIT_FOR_CHAR_IN_AREA_ANY_MEANS (p1, 112.50, 241.50, 2.00, 0.50, 0.50, do_kill_frenzy_6:)
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.OPCODE, Cmd.THREAD_AREA_TYPE)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} {} = {} ({}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3], cmd_rot[4][0], cmd_rot[4][1], cmd_rot[4][2], cmd_rot[4][3], cmd_rot[4][4], cmd_rot[5])
         return new_line
 
     elif "THREAD_WAIT_FOR_CHAR_IN_BLOCK" in line_uppercase:
         # THREAD_TRIGGER test1 = THREAD_WAIT_FOR_CHAR_IN_BLOCK (p1, 112.50, 241.50, 2.00, do_something:)
         cmd = read_line(line, Cmd.OPCODE, Cmd.VAR_NAME, Cmd.EQUAL, Cmd.OPCODE, Cmd.THREAD_BLOCK_TYPE)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} {} = {} ({}, {:.2f}, {:.2f}, {:.2f}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3], cmd_rot[4][0], cmd_rot[4][1], cmd_rot[4][2], cmd_rot[5])
         return new_line
 
@@ -880,7 +890,7 @@ lines = [
 #    print(new_line)
 
 
-def flip_exec_opcode(line: str, rotation_angle: int):
+def flip_exec_opcode(line: str, flip_code: int):
 
     new_line = line
     
@@ -891,7 +901,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
         cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_XYZ_F_OR_VAR)
 
         if type(cmd[2]) == tuple:
-            cmd_rot = flip_params(cmd, rotation_angle)
+            cmd_rot = flip_params(cmd, flip_code)
             new_line = "{} ({}, {:.2f}, {:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2])
         
         return new_line
@@ -899,24 +909,24 @@ def flip_exec_opcode(line: str, rotation_angle: int):
     elif "EXPLODE_WALL" in line_uppercase:
         # EXPLODE_WALL (143.5, 151.5, 2.0) TOP
         cmd = read_line(line, Cmd.OPCODE, Cmd.COORD_XYZ_F, Cmd.PARAM_ENUM)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
 
         old_face = cmd_rot[2]
-        new_face = flip_face(old_face, rotation_angle)
+        new_face = flip_face(old_face, flip_code)
         cmd_rot[2] = new_face
 
         new_line = "{} ({:.2f}, {:.2f}, {:.2f}) {}".format(cmd_rot[0], cmd_rot[1][0], cmd_rot[1][1], cmd_rot[1][2], cmd_rot[2])
 
         return new_line
     
-    elif ("EXPLODE_NO_RING" in line_uppercase       # TODO: refactor to EXPLODE
+    elif ("EXPLODE_NO_RING" in line_uppercase
           or "EXPLODE_LARGE" in line_uppercase
           or "EXPLODE_SMALL" in line_uppercase
           or "EXPLODE" in line_uppercase):
         
         cmd = read_line(line, Cmd.OPCODE, Cmd.COORD_XYZ_F_OR_VAR)
         if type(cmd[1]) == tuple:
-            cmd_rot = flip_params(cmd, rotation_angle)
+            cmd_rot = flip_params(cmd, flip_code)
             new_line = "{} ({:.2f}, {:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1][0], cmd_rot[1][1], cmd_rot[1][2])
 
         return new_line
@@ -935,18 +945,18 @@ def flip_exec_opcode(line: str, rotation_angle: int):
                 params, pointer = get_info_manually(line, integer_indexes=[3], float_indexes=[4])
                 cmd.extend(params)
 
-                cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[4])
+                cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[4])
                 new_line = "{} ({}, {}, {}, {}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3], cmd_rot[4], cmd_rot[5])
             else:
                 cmd = read_line(line, Cmd.OPCODE, Cmd.TWO_PARAMS_XYZ_F)
-                cmd_rot = flip_params(cmd, rotation_angle)
+                cmd_rot = flip_params(cmd, flip_code)
                 new_line = "{} ({}, {}, {:.2f}, {:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2], cmd_rot[3][0], cmd_rot[3][1], cmd_rot[3][2])
         return new_line
             
 
     elif "ADD_PATROL_POINT" in line_uppercase:
         cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_XYZ_F)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({}, {:.2f}, {:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2])
         return new_line
 
@@ -956,13 +966,13 @@ def flip_exec_opcode(line: str, rotation_angle: int):
         cmd.append( tuple(params[0:3]) )
         cmd.append(params[-1])
 
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({}, {}, {}, {})".format(cmd_rot[0], cmd_rot[1][0], cmd_rot[1][1], cmd_rot[1][2], cmd_rot[2])
         return new_line
 
     elif "ADD_NEW_BLOCK" in line_uppercase:
         cmd = read_line(line, Cmd.OPCODE, Cmd.COORD_XYZ_U8)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({}, {}, {})".format(cmd_rot[0], cmd_rot[1][0], cmd_rot[1][1], cmd_rot[1][2])
         return new_line
 
@@ -970,24 +980,37 @@ def flip_exec_opcode(line: str, rotation_angle: int):
         if "SIDE" in line_uppercase:
             # CHANGE_BLOCK SIDE (16, 31, 3) BOTTOM WALL BULLET NOT_FLAT NOT_FLIP 0 142
             cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.ROTATION, Cmd.PARAM_NUM)
-            cmd_rot = flip_params(cmd, rotation_angle)
+            cmd_rot = flip_params(cmd, flip_code)
             old_face = cmd_rot[3]
-            new_face = flip_face(old_face, rotation_angle)
+            new_face = flip_face(old_face, flip_code)
             cmd_rot[3] = new_face
+
+            if cmd_rot[7].upper() == "NOT_FLIP":
+                cmd_rot[7] = "FLIP"
+            elif cmd_rot[7].upper() == "FLIP":
+                cmd_rot[7] = "NOT_FLIP"
+
             new_line = "{} {} ({}, {}, {}) {} {} {} {} {} {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4], cmd_rot[5], cmd_rot[6], cmd_rot[7], cmd_rot[8], cmd_rot[9])
             
         elif "LID" in line_uppercase:
             # CHANGE_BLOCK LID (176, 228, 1) NOT_FLAT NOT_FLIP 0 0 978
             cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_NUM, Cmd.ROTATION, Cmd.PARAM_NUM)
-            cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[6])  # TODO: , reverse_rot_param=True
+            cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[6], reverse_rot_param=True)
             
             # fix flipped lid tiles for 90 and 270 angles
-            if rotation_angle == 90 or rotation_angle == 270:
-                flip_status = cmd[4].strip().upper()
-                if flip_status == "FLIP":
-                    cmd_rot[6] += 180
-                    if cmd_rot[6] >= 360:
-                        cmd_rot[6] -= 360
+            #if flip_code == 90 or flip_code == 270:
+            #    flip_status = cmd[4].strip().upper()
+            #    if flip_status == "FLIP":
+            #        cmd_rot[6] += 180
+            #        if cmd_rot[6] >= 360:
+            #            cmd_rot[6] -= 360
+
+            if cmd_rot[4].upper() == "NOT_FLIP":
+                cmd_rot[4] = "FLIP"
+            elif cmd_rot[4].upper() == "FLIP":
+                cmd_rot[4] = "NOT_FLIP"
+
+            # TODO: fix rotation for flip y ????
 
             #cmd_rot = rotate_params(cmd, rotation_angle, rotation_param_indexes=[6], reverse_rot_param=True)
             
@@ -996,7 +1019,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
         elif "TYPE" in line_uppercase:
             # CHANGE_BLOCK TYPE (177, 229, 1) FIELD 0
             cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8, Cmd.PARAM_ENUM, Cmd.PARAM_NUM)
-            cmd_rot = flip_params(cmd, rotation_angle)
+            cmd_rot = flip_params(cmd, flip_code)
             new_line = "{} {} ({}, {}, {}) {} {}".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3], cmd_rot[4])
 
 
@@ -1004,7 +1027,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
 
     elif "SWITCH_ROAD" in line_uppercase:
         cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} {} ({}, {}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2])
 
         return new_line
@@ -1020,15 +1043,13 @@ def flip_exec_opcode(line: str, rotation_angle: int):
 
         #cmd_rot = rotate_params(cmd, rotation_angle)
 
-        if (rotation_angle == 180):
+        if (flip_code == FLIP_XY):
             minX = MAP_MAX_X - minX - width - 1
             minY = MAP_MAX_Y - minY - height - 1
-        elif (rotation_angle == 90):
-            minX, minY = MAP_MAX_Y - minY - height - 1, minX
-            width, height = height, width
-        elif (rotation_angle == 270):
-            minX, minY = minY, MAP_MAX_X - minX - width - 1
-            width, height = height, width
+        elif (flip_code == FLIP_X):
+            minX = MAP_MAX_X - minX - width - 1
+        elif (flip_code == FLIP_Y):
+            minY = MAP_MAX_Y - minY - height - 1
 
         maxX = minX + width
         maxY = minY + height
@@ -1045,7 +1066,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
         cmd.append( tuple(params[1:4]) )
         cmd.append(params[-1])
 
-        cmd_rot = flip_params(cmd, rotation_angle, rotation_param_indexes=[3])
+        cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[3])
         
         new_line = "{} ({}, {:.2f}, {:.2f}, {:.2f}, {})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[3])
 
@@ -1054,7 +1075,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
     elif "PERFORM_SAVE_GAME" in line_uppercase:
         # PERFORM_SAVE_GAME (thr_savepoint_1, 113.00, 123.00, 2.00, 1.00, 1.00)
         cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_XYZ_WH_F)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
 
         new_line = "{} ({}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1], cmd_rot[2][0], cmd_rot[2][1], cmd_rot[2][2], cmd_rot[2][3], cmd_rot[2][4])
         
@@ -1063,7 +1084,7 @@ def flip_exec_opcode(line: str, rotation_angle: int):
     elif "SET_DIR_OF_TV_VANS" in line_uppercase:
         # SET_DIR_OF_TV_VANS (113.00, 123.00)
         cmd = read_line(line, Cmd.OPCODE, Cmd.COORD_XY_F)
-        cmd_rot = flip_params(cmd, rotation_angle)
+        cmd_rot = flip_params(cmd, flip_code)
         new_line = "{} ({:.2f}, {:.2f})".format(cmd_rot[0], cmd_rot[1][0], cmd_rot[1][1])
         return new_line
 
@@ -1103,10 +1124,6 @@ lines2 = [
 
 def rotate_bool_opcode(line: str, rotation_angle: int):
 
-    # TODO: remove this; do it before calling this function
-    #if not is_bool_opcode_rotatable(line):
-    #    return line     # do nothing
-    
     new_line = line
     
     line_uppercase = line.upper()
