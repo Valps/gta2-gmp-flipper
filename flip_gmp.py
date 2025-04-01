@@ -1133,9 +1133,18 @@ def flip_gmp(gmp_path, chunk_infos, flip_x, flip_y):
         print("Error: This GMP flipper only support uncompressed maps.")
         sys.exit(-1)
 
+    flip_code = get_flip(flip_x, flip_y)    # 0 = No flip, 1 = Flip x, 2 = Flip y, 3 = Flip x & y
+
+    if flip_code == FLIP_X:
+        flip_type = "x"
+    elif flip_code == FLIP_Y:
+        flip_type = "y"
+    else:
+        flip_type = "xy"
+
     # create a copy of gmp file
     filename = get_filename(gmp_path)
-    output_path = ROOT_DIR / f"{filename}_flipped.gmp"
+    output_path = ROOT_DIR / f"{filename}_flipped_{flip_type}.gmp"
 
     print(f"Creating copy of {filename}.gmp")
     shutil.copyfile(gmp_path, output_path)
@@ -1145,7 +1154,7 @@ def flip_gmp(gmp_path, chunk_infos, flip_x, flip_y):
     zones_info_array = get_zones_info_data(gmp_path, chunk_infos)
     light_info_array = get_light_info_data(gmp_path, chunk_infos)
 
-    flip_code = get_flip(flip_x, flip_y)    # 0 = No flip, 1 = Flip x, 2 = Flip y, 3 = Flip x & y
+    
 
     # flip map
     flip_gmp_blocks(output_path, chunk_infos, flip_code, block_info_array)
