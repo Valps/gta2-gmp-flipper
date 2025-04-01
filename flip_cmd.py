@@ -28,8 +28,6 @@ MAP_MAX_X = 256
 MAP_MAX_Y = 256
 
 DOOR_FACES = ["BOTTOM", "TOP", "LEFT", "RIGHT"]
-DOOR_FACES2 = ["BOTTOM", "LEFT", "TOP", "RIGHT"]    # flip y
-#DOOR_FACES = ["RIGHT", "TOP", "LEFT", "BOTTOM"]
 
 PHONES = ["GREEN_PHONE", "YELLOW_PHONE", "RED_PHONE", "PHONE"]
 
@@ -181,15 +179,7 @@ def flip_face(old_face: str, flip_code: int):
         sys.exit(-1)
     index = DOOR_FACES.index(old_face)
 
-    if flip_code == FLIP_X:
-        array = DOOR_FACES
-    elif flip_code == FLIP_Y:
-        array = DOOR_FACES2
-    elif flip_code == FLIP_XY:
-        array = DOOR_FACES      # TODO: flip XY
-    else:
-        print(f"ERROR: Invalid flip code: {flip_code}.")
-        sys.exit(-1)
+    array = DOOR_FACES
 
     new_array = swap_faces(array, flip_code)
         
@@ -996,14 +986,6 @@ def flip_exec_opcode(line: str, flip_code: int):
             # CHANGE_BLOCK LID (176, 228, 1) NOT_FLAT NOT_FLIP 0 0 978
             cmd = read_line(line, Cmd.OPCODE, Cmd.PARAM_ENUM, Cmd.COORD_XYZ_U8, Cmd.PARAM_ENUM, Cmd.PARAM_ENUM, Cmd.PARAM_NUM, Cmd.ROTATION, Cmd.PARAM_NUM)
             cmd_rot = flip_params(cmd, flip_code, rotation_param_indexes=[6], reverse_rot_param=True)
-            
-            # fix flipped lid tiles for 90 and 270 angles
-            #if flip_code == 90 or flip_code == 270:
-            #    flip_status = cmd[4].strip().upper()
-            #    if flip_status == "FLIP":
-            #        cmd_rot[6] += 180
-            #        if cmd_rot[6] >= 360:
-            #            cmd_rot[6] -= 360
 
             if cmd_rot[4].upper() == "NOT_FLIP":
                 cmd_rot[4] = "FLIP"
