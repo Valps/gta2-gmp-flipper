@@ -155,7 +155,7 @@ def main():
 
     # create output folder, if it not exists
     flip_type = "x" if flip_code == FLIP_X else "y"
-    output_folder = miss2_path.parent / (filename + f"_flipped_{flip_type}")
+    output_folder = miss2_path.parent / (filename + f"_flip_{flip_type}")
     if (not output_folder.exists()):
         output_folder.mkdir()
 
