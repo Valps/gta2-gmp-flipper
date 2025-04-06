@@ -539,6 +539,10 @@ def flip_lid(block_data, flip_code):
 def flip_tile(side_word):
     return side_word ^ (2**13)
 
+def has_side_tile(side_word):
+    tile_idx = side_word % 1024
+    return True if tile_idx != 0 else False
+
 def flip_sides(block_data, flip_code):
     left_word = int.from_bytes(block_data[0:2], 'little')
     right_word = int.from_bytes(block_data[2:4], 'little')
@@ -558,10 +562,14 @@ def flip_sides(block_data, flip_code):
 
     # flip side tiles as well
     if (flip_code != FLIP_XY):
-        top_word = flip_tile(top_word)
-        bottom_word = flip_tile(bottom_word)
-        right_word = flip_tile(right_word)
-        left_word = flip_tile(left_word)
+        if has_side_tile(top_word):
+            top_word = flip_tile(top_word)
+        if has_side_tile(bottom_word):
+            bottom_word = flip_tile(bottom_word)
+        if has_side_tile(right_word):
+            right_word = flip_tile(right_word)
+        if has_side_tile(left_word):
+            left_word = flip_tile(left_word)
 
     #array = [left_word, right_word, top_word, bottom_word]
     array = []
